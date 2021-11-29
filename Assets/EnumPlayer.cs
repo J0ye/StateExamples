@@ -3,8 +3,13 @@ using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
 
-public class Player : MonoBehaviour
+public enum SimpleState {Walking, Airborn, DoubleJumped, Ducking }
+
+public class EnumPlayer : MonoBehaviour
 {
+    public SimpleState state;
+
+    [Space]
     public float speed = 5f;
     public float jumpForce = 100f;
     public LayerMask groundLayer;
@@ -14,8 +19,6 @@ public class Player : MonoBehaviour
     protected SpriteRenderer sr;
     protected Animator anim;
     protected Tween colorTween;
-    protected Coroutine charge;
-    protected bool secondJumpReady = true; 
 
     public void Start()
     {
@@ -28,33 +31,49 @@ public class Player : MonoBehaviour
     public void Update()
     {
         Move();
-        if(OnGround() && 
-            GetJumpInput())
+        switch(state)
         {
-            Jump();
-        } else if(!OnGround() && secondJumpReady 
-            && GetJumpInput())
-        {
-            Jump();
-            secondJumpReady = false;
-        }
-        else if(OnGround() &&
-            Input.GetAxis("Vertical") < 0)
-        {
-            Duck();
-            if(charge == null)
-            {
-                charge = StartCoroutine(PowerJump());
-            }
-        }
-        else
-        {
-            ResetDuck();
-        }
+            case SimpleState.Walking:
+                if (GetJumpInput())
+                {
+                    state = SimpleState.Airborn;
+                    Debug.Log("Changed to airborn");
+                    Jump();
+                } else if (Input.GetAxis("Vertical") < 0)
+                {
+                    state = SimpleState.Ducking;
+                    Duck();
+                    StartCoroutine(PowerJump());
+                }
+                break;
 
-        if(OnGround())
-        {
-            secondJumpReady = true;
+            case SimpleState.Airborn:
+                if(GetJumpInput())
+                {
+                    state = SimpleState.DoubleJumped;
+                    Jump();
+                } else if(OnGround() && rb.velocity.y < 0)
+                {
+                    state = SimpleState.Walking;
+                }
+                break;
+
+            case SimpleState.DoubleJumped:
+                if (OnGround())
+                {
+                    state = SimpleState.Walking;
+                }
+                break;
+
+            case SimpleState.Ducking:
+                Debug.Log("z: " + GetInputAxisRaw().z);
+                if(GetInputAxisRaw().z > -1 || !OnGround())
+                {
+                    state = SimpleState.Walking;
+                    ResetDuck();
+                    if (!OnGround()) state = SimpleState.Airborn;
+                }
+                break;
         }
     }
 
@@ -75,13 +94,15 @@ public class Player : MonoBehaviour
         float chargeTime = 1f;
         colorTween = sr.DOColor(chargingColor, chargeTime);
         yield return new WaitForSeconds(chargeTime);
-        if(OnGround() && GetInputAxis().z < 0)
+        if (state == SimpleState.Ducking)
         {
             sr.color = new Color(chargingColor.r, 0, chargingColor.b);
             yield return new WaitWhile(() => GetInputAxisRaw().z < 0);
+            state = SimpleState.Airborn;
+            ResetDuck();
             Jump();
             Jump();
-        }            
+        }
     }
 
     public virtual void Duck()
@@ -94,7 +115,6 @@ public class Player : MonoBehaviour
         transform.localScale = new Vector3(1f, 1f, 1f);
         sr.color = new Color(255, 255, 255);
         colorTween.Kill();
-        charge = null;
     }
 
     protected virtual bool GetJumpInput()
