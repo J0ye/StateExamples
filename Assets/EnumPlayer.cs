@@ -40,6 +40,8 @@ public class EnumPlayer : MonoBehaviour
         {
             print("Hello World");
         }
+
+        transform.position = transform.position;
         Move();
         switch(state)
         {
