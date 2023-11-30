@@ -30,6 +30,8 @@ public class EnumPlayer : MonoBehaviour
 
     public void Update()
     {
+
+        transform.position = transform.position;
         Move();
         switch(state)
         {
