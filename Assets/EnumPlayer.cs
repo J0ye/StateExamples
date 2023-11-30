@@ -30,6 +30,16 @@ public class EnumPlayer : MonoBehaviour
 
     public void Update()
     {
+        /*
+         
+         new line
+         
+         */
+
+        if(true)
+        {
+            print("Hello World");
+        }
         Move();
         switch(state)
         {
